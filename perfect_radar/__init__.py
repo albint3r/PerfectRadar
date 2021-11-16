@@ -12,6 +12,10 @@ class PerfectRadar:
         self.lat = None
         self.long = None
 
+    def config(self):
+        """Create a general configuration for the column names and properties inside the DataFrame."""
+        pass
+
     def assign_coordinates(self, main_lat: float, main_lon: float):
         """Create the main coordinates of the listing"""
         self.lat = main_lat
@@ -25,12 +29,12 @@ class PerfectRadar:
         return self.df
 
     def subset_by_type(self, type_of_listing: str = 'Casa', type_of_offer: str = 'Buy'):
-
         """Create a Subset ont the DataFrame by type of listing and type of offer.
-        :argument (type_of_listing: str): Is the type of listing inside the column 'Tipo de inmueble'
-        (Casa or Departamento).
 
-        :argument (type_of_offer: str): Is the type of offer inside the column 'Tipo de oferta' (Buy or Rent). The
+        :argument type_of_listing: Is the type of listing inside the column 'Tipo de inmueble' (Casa or Departamento).
+        :type type_of_listing: str
+        :argument type_of_offer: Is the type of offer inside the column 'Tipo de oferta' (Buy or Rent).
+        :type type_of_offer: str
 
         :returns (subset_df: DataFrame)
         """
@@ -44,10 +48,14 @@ class PerfectRadar:
         return self.subset_by_type
 
     def mesure_distance(self, lat: float = None, long: float = None):
-        """Apply the distance formula to mesure the distance between the main latitude and longitude with
+        """Mesure the distance between one to one coordinates.
+
+        Apply the distance formula to mesure the distance between the main latitude and longitude with
         other coordinates
-        :argument (lat: float) Thi is the latitud of the location you want to mesure vs your main location
-        :argument (long: float) Thi is the longitud of the location you want to mesure vs your main location
+        :argument lat: Thi is the latitud of the location you want to mesure vs your main location
+        :type lat: float
+        :argument long: Thi is the longitud of the location you want to mesure vs your main location
+        :type long: float
 
         :return (float)
         """
@@ -58,7 +66,9 @@ class PerfectRadar:
         return distance.distance((self.lat, self.long), (lat, long))
 
     def mesure_df_distances(self):
-        """ Apply the 'Mesure distance function' on multiple rows of the self.CSV and create a new Column
+        """ Mesure the distance between one to many coordinates.
+
+        Apply the 'Mesure distance function' on multiple rows of the self.CSV and create a new Column
         named: Distancia. Each result represent the distance of the main coordinates with a single listing in the Data
 
         :returns (DataFrame)
@@ -74,6 +84,7 @@ class PerfectRadar:
 
     def subset_by_km(self):
         """Crete a new subset base on the nearest distance of the main coordinates an the listings.
+
         By defualt use 1.5 radius, this is equal to 3km. The listings less than 1.5 in the distancia column of
         would be added to this new subset.
 
@@ -85,7 +96,9 @@ class PerfectRadar:
         return self.subset_by_type
 
     def rm_outliers(self, *values_to_rm: str):
-        """Remove the Outliers values in the DataFrame. The most comun values to remove are: price, land size and
+        """Remove the Outliers values in the DataFrame.
+
+        The most comun values to remove are: price, land size and
         construction size. By default it sugets to delet the price of the DataFrame, because the prices is one of
         the most sensitive information for the user.
 

@@ -21,9 +21,9 @@ def perfect_factory():
     p.subset_by_km()
 
     # 7) Remove the the Outliers of your chose
-    df_result = p.rm_outliers('precio_name', 'm2_terreno_name')  # <- Add list of values (str)
+    df_result = p.rm_outliers('precio_name', 'm2_terreno_name', 'm2_construccion_name')  # <- Add list of values (str)
 
     return df_result
 
 if __name__ == '__main__':
-    perfect_factory()
+    df = perfect_factory()

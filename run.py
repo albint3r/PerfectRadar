@@ -1,6 +1,7 @@
 from perfect_radar import PerfectRadar
 
 def perfect_factory():
+    """This is the factory function to create the simplest version of the PerfectRadar """
 
     # 1) Create Instances of Perfect Radar
     p = PerfectRadar(r'C:\Users\albin\PycharmProjects\pefect_radar_tutorial\perfect_radar\listing_csv')  # <- Add CSV

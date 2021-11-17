@@ -4,7 +4,7 @@ import pandas as pd
 
 class PerfectRadar:
     """ """
-    RADIO = 1.5  # <- Radio de 1.5 km
+    RADIO = 1.5  # <- Radio of 1.5 km
 
     def __init__(self, *cvs_file_path: csv):
         self.cvs = cvs_file_path  # <- Can add multiple paths of Listings CVS

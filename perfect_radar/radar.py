@@ -3,7 +3,8 @@ from geopy import distance
 import pandas as pd
 
 class PerfectRadar:
-    """ """
+    """Find the nearest listing of a coordinate in your city (Data Base). """
+
     RADIO = 1.5  # <- Radio of 1.5 km
 
     def __init__(self, *cvs_file_path: csv):
@@ -12,9 +13,37 @@ class PerfectRadar:
         self.lat = None
         self.long = None
 
-    def config(self):
-        """Create a general configuration for the column names and properties inside the DataFrame."""
-        pass
+    def config_columns(self, id: str, lat_col: str, lon_col: str, type_of_listing_col: str, type_of_offer_col: str):
+        """Setup the value names of the columns inside the DataFrame Table.
+
+        This is to personalize the names of the columns in the table to work correctly. The information data is saved as
+        a dictionary, call it: 'config_columns'.
+
+        Parameters
+        ----------
+        id: str
+            This could be a regular ID or SKU identifier
+
+        lat_col: str
+            Latitude Column name in the DataFrame
+
+        lon_col: str
+            Longitude Column name in the DataFrame
+
+        type_of_listing_col: str
+            Type of listing column name
+
+        type_of_offer_col: str
+            Type of offer column name
+        """
+
+        self.config_columns = dict()
+
+        self.config_columns['ID'] = id
+        self.config_columns['LAT'] = lat_col
+        self.config_columns['LON'] = lon_col
+        self.config_columns['TYPE_OF_LISTING'] = type_of_listing_col
+        self.config_columns['TYPE_OF_OFFER'] = type_of_offer_col
 
     def assign_coordinates(self, main_lat: float, main_lon: float):
         """Create the main coordinates of the listing
@@ -44,21 +73,31 @@ class PerfectRadar:
         Parameters
         ----------
         type_of_listing : str
-            Is the type of listing inside the column 'Tipo de inmueble' (Casa or Departamento).
+            Is the type of listing inside the column self.config['type_of_listing_col'] (Casa or Departamento).
             (Default value = 'Casa')
 
         type_of_offer : str
-            Is the type of offer of the listing inside the column 'Tipo de oferta (Buy or rent).
+            Is the type of offer of the listing inside the column self.config['type_of_offer_col'] (Buy or rent).
             (Default value = 'Buy')
+
+        Raises
+        -------
+        raise:
+            The user must first configurate the name of the columns inside the DataFrame.
 
         Returns
         -------
         DataFrame
         """
 
+        # Validate if the Config_column is setup
+        if not hasattr(PerfectRadar, 'config_columns'):
+            raise('You musth setup the config_columns values of the DataFrame Columns names. '
+                  'Use the config_columns method to do this!!!.')
+
         self.subset_by_type = self.df[
-            (self.df['tipo_inmueble'] == type_of_listing) &
-            (self.df['tipo_oferta_nombre'] == type_of_offer)]
+            (self.df[self.config_columns.get('TYPE_OF_LISTING')] == type_of_listing) &
+            (self.df[self.config_columns.get('TYPE_OF_OFFER')] == type_of_offer)]
 
         self.subset_by_type = self.subset_by_type.copy()
 
@@ -106,7 +145,8 @@ class PerfectRadar:
             raise ('Apply the subset_by_type function first.')
 
         self.subset_by_type['distancia'] = self.subset_by_type.apply(
-            lambda row: self.mesure_distance(row.loc['lat_name'], row.loc['long_name']), axis=1)
+            lambda row: self.mesure_distance(row.loc[self.config_columns.get
+            ('LAT')], row.loc[self.config_columns.get('LON')]), axis=1)
 
         return self.subset_by_type
 
@@ -143,8 +183,8 @@ class PerfectRadar:
         """
 
         if not bool(values_to_rm):  # <- Validate if is a empty list
-            raise ('You need to add Values to the "rm_outliers" fucntion. For example: price,'
-                   ' land_size or contruction_size')
+            raise ('You need to add Values to the "rm_outliers" function. For example: price,'
+                   'land_size or construction_size')
 
         df_without_outliers = []
         for val in values_to_rm:
@@ -162,6 +202,6 @@ class PerfectRadar:
         self.subset_by_type = pd.concat(df_without_outliers)
 
         # Drop Duplicate Rows by SKU
-        self.subset_by_type = self.subset_by_type.drop_duplicates(subset='sku_nombre', keep='first')
+        self.subset_by_type = self.subset_by_type.drop_duplicates(subset=self.config_columns.get('ID'), keep='first')
 
         return self.subset_by_type

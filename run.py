@@ -1,10 +1,10 @@
-from perfect_radar import PerfectRadar
+from perfect_radar.radar import PerfectRadar
 
 def perfect_factory():
     """This is the factory function to create the simplest version of the PerfectRadar """
 
     # 1) Create Instances of Perfect Radar
-    p = PerfectRadar(r'C:\Users\albin\PycharmProjects\pefect_radar_tutorial\perfect_radar\listing_csv')  # <- Add CSV
+    p = PerfectRadar(r'.\perfect_radar\listing_csv')  # <- Add CSV
 
     # 2) Add the coordinates you want to analyze
     p.assign_coordinates(20.6948693, -103.4108069)  # Add <- Coordinates

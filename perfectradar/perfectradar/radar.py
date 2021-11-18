@@ -13,7 +13,10 @@ class PerfectRadar:
         self.lat = None
         self.long = None
 
-    def config_columns(self, id: str, lat_col: str, lon_col: str, type_of_listing_col: str, type_of_offer_col: str):
+    def __repr__(self):
+        return 'Name'
+
+    def config_columns(self, id : str, lat_col: str, lon_col: str, type_of_listing_col: str, type_of_offer_col: str):
         """Setup the value names of the columns inside the DataFrame Table.
 
         This is to personalize the names of the columns in the table to work correctly. The information data is saved as
@@ -92,7 +95,7 @@ class PerfectRadar:
 
         # Validate if the Config_column is setup
         if not hasattr(PerfectRadar, 'config_columns'):
-            raise('You musth setup the config_columns values of the DataFrame Columns names. '
+            raise('You must setup the config_columns values of the DataFrame Columns names. '
                   'Use the config_columns method to do this!!!.')
 
         self.subset_by_type = self.df[
@@ -125,7 +128,7 @@ class PerfectRadar:
         """
 
         if self.lat is None and self.long is None:
-            raise ('You need to add the main coordinates. Apply "assign_coordinates" function to do that =)')
+            raise 'You need to add the main coordinates. Apply "assign_coordinates" function to do that =)'
 
         return distance.distance((self.lat, self.long), (lat, long))
 
@@ -142,7 +145,7 @@ class PerfectRadar:
         """
 
         if self.subset_by_type is None:
-            raise ('Apply the subset_by_type function first.')
+            raise 'Apply the subset_by_type function first.'
 
         self.subset_by_type['distancia'] = self.subset_by_type.apply(
             lambda row: self.mesure_distance(row.loc[self.config_columns.get
@@ -165,7 +168,7 @@ class PerfectRadar:
 
         return self.subset_by_type
 
-    def rm_outliers(self, *values_to_rm: str):
+    def rm_outliers(self, *values_to_rm: str, show_describe: bool = False):
         """Remove the Outliers values in the DataFrame.
 
         The most commune values to remove are: price, land size and
@@ -176,6 +179,10 @@ class PerfectRadar:
         ----------
         *values_to_rm : str
             This is a list of the names of columns values that will be removed from the Subset DataFrame.
+
+        show_describe: bool
+            This apply the describe method of pandas to show a resume of the final result.
+            (Default value = None, optional)
 
         Returns
         -------
@@ -203,5 +210,11 @@ class PerfectRadar:
 
         # Drop Duplicate Rows by SKU
         self.subset_by_type = self.subset_by_type.drop_duplicates(subset=self.config_columns.get('ID'), keep='first')
+
+        # Show the a resume of the data result.
+        if show_describe:
+            print(f'The function run correctly! Total results near: {len(self.subset_by_type)}\n')
+            print(self.subset_by_type[['precio_name', 'm2_terreno_name', 'm2_construccion_name']].describe(). \
+                  apply(lambda x: x.apply('{:.2f}'.format)))
 
         return self.subset_by_type

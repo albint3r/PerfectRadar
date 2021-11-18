@@ -1,10 +1,11 @@
-from perfect_radar.radar import PerfectRadar
+from perfectradar.perfectradar.radar import PerfectRadar
+import csv
 
 def perfect_factory():
     """This is the factory function to create the simplest version of the PerfectRadar """
 
     # 1) Create Instances of Perfect Radar
-    p = PerfectRadar(r'.\perfect_radar\listing_csv')  # <- Add CSV
+    p = PerfectRadar(r'./listing_csv')  # <- Add CSV
 
     p.config_columns( id = 'sku_nombre',
               lat_col = 'lat_name' ,
@@ -29,10 +30,8 @@ def perfect_factory():
     p.subset_by_km()
 
     # 7) Remove the the Outliers of your chose
-    df_result = p.rm_outliers('precio_name', 'm2_terreno_name', 'm2_construccion_name')  # <- Add list of values (str)
-    
-    print(f'The function run correctly, this is a resume of the results:\n')
-    print(df_result.describe())
+    df_result = p.rm_outliers('precio_name', 'm2_terreno_name',
+                              'm2_construccion_name', show_describe = True)  # <- Add list of values (str)
 
     return df_result
 

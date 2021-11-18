@@ -1,0 +1,5 @@
+setup.py
+PerfectRadar.egg-info/PKG-INFO
+PerfectRadar.egg-info/SOURCES.txt
+PerfectRadar.egg-info/dependency_links.txt
+PerfectRadar.egg-info/top_level.txt

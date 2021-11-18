@@ -8,6 +8,20 @@ class PerfectRadar:
     RADIO = 1.5  # <- Radio of 1.5 km
 
     def __init__(self, project_name: str,  *cvs_file_path: csv):
+        """This are the initianlize values to create a instance.
+
+        Need to add the name of the project and a list of CSV tables, that contains longitud and latitud columns.
+
+        Parameters
+        ----------
+        project_name: str
+            This is the name of the project. It doesn't affect on any the behavior of the program.
+
+        cvs_file_path: list/CSV
+            This is a list of CSV tables to analyze. The table must have latitud and longitud columns to work.
+            Can add a single file, if you add more than one it must be in the same format, because it will concatenate
+            all the tables in one single result.
+        """
         self.project_name = project_name
         self.csv = cvs_file_path  # <- Can add multiple paths of Listings CVS
         self.df = None

@@ -5,7 +5,7 @@ def perfect_factory():
     """This is the factory function to create the simplest version of the PerfectRadar """
 
     # 1) Create Instances of Perfect Radar
-    p = PerfectRadar(r'./listing_csv')  # <- Add CSV
+    p = PerfectRadar('Test_project' ,r'./listing_csv')  # <- Add CSV
 
     p.config_columns( id = 'sku_nombre',
               lat_col = 'lat_name' ,

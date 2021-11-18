@@ -1,4 +1,4 @@
-from perfect_radar.radar import PerfectRadar
+from perfectradar.perfectradar.radar import PerfectRadar
 
 """perfect_radar
 ==========================================================

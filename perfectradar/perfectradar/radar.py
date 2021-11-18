@@ -7,14 +7,15 @@ class PerfectRadar:
 
     RADIO = 1.5  # <- Radio of 1.5 km
 
-    def __init__(self, *cvs_file_path: csv):
-        self.cvs = cvs_file_path  # <- Can add multiple paths of Listings CVS
+    def __init__(self, project_name: str,  *cvs_file_path: csv):
+        self.project_name = project_name
+        self.csv = cvs_file_path  # <- Can add multiple paths of Listings CVS
         self.df = None
         self.lat = None
         self.long = None
 
     def __repr__(self):
-        return 'Name'
+        return self.project_name
 
     def config_columns(self, id : str, lat_col: str, lon_col: str, type_of_listing_col: str, type_of_offer_col: str):
         """Setup the value names of the columns inside the DataFrame Table.
@@ -66,8 +67,8 @@ class PerfectRadar:
     def cvs_to_df(self):
         """Convert Multiple CVS to DataFrame and then concatenate all in one"""
 
-        list_cvs = [pd.read_csv(cvs) for cvs in self.cvs]
-        self.df = pd.concat(list_cvs)
+        list_csv = [pd.read_csv(csv) for csv in self.csv]
+        self.df = pd.concat(list_csv)
         return self.df
 
     def subset_by_type(self, type_of_listing: str = 'Casa', type_of_offer: str = 'Buy'):

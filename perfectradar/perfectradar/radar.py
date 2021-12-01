@@ -1,14 +1,19 @@
 import csv
 from geopy import distance
 import pandas as pd
-from ..perfectradar.col_creator import segment_sector_inmo
+from typing import Union
+from ..perfectradar.col_creator import segment_sector_inmo, avg_price_m2, avg_price_m2_const
+
+float_int = Union[float, int]
+
 
 class PerfectRadar:
     """Find the nearest listing of a coordinate in your city (Data Base)."""
 
     RADIO = 1.5  # <- Radio of 1.5 km
+    RENTAL_MINIMAL_DATA = 30
 
-    def __init__(self, project_name: str,  *cvs_file_path: csv):
+    def __init__(self, project_name: str, *cvs_file_path: csv):
         """This are the initialize values to create a instance.
 
         Need to add the name of the project and a list of CSV tables, that contains longitud and latitud columns.
@@ -32,8 +37,8 @@ class PerfectRadar:
     def __repr__(self):
         return self.project_name
 
-    def config_columns(self, id : str, lat_col: str, lon_col: str, type_of_listing_col: str,
-                       type_of_offer_col: str, price_col: str, rent_value: str):
+    def config_columns(self, id: str, lat_col: str, lon_col: str, type_of_listing_col: str,
+                       type_of_offer_col: str, price_col: str, land_size_col: str, rent_value: str) -> None:
         """Setup the value names of the columns inside the DataFrame Table.
         
         This is to personalize the names of the columns in the table to work correctly. The information data is saved as
@@ -64,6 +69,7 @@ class PerfectRadar:
 
         Returns
         ----------
+        None
         """
 
         self.config_columns = dict()
@@ -74,9 +80,10 @@ class PerfectRadar:
         self.config_columns['TYPE_OF_LISTING'] = type_of_listing_col
         self.config_columns['TYPE_OF_OFFER'] = type_of_offer_col
         self.config_columns['PRICE'] = price_col
-        self.config_columns['RENT'] = rent_value # <- This is the only single value in the config
+        self.config_columns['LAND_SIZE'] = land_size_col
+        self.config_columns['RENT'] = rent_value  # <- This is the only single value in the config
 
-    def assign_coordinates(self, main_lat: float, main_lon: float):
+    def set_coordinates(self, main_lat: float, main_lon: float) -> None:
         """Create the main coordinates of the listing
 
         Parameters
@@ -95,12 +102,13 @@ class PerfectRadar:
 
         Returns
         ----------
+        None
         """
 
         self.lat = main_lat
         self.long = main_lon
 
-    def cvs_to_df(self):
+    def cvs_to_df(self) -> pd.core.frame.DataFrame:
         """Convert a CSV to a DataFrame
 
         Parameters
@@ -108,15 +116,14 @@ class PerfectRadar:
 
         Returns
         ----------
+        DataFrame -> pd.core.frame.DataFrame
         """
 
         list_csv = [pd.read_csv(csv) for csv in self.csv]
         self.df = pd.concat(list_csv)
-
         return self.df
 
-
-    def create_col_sector_inmo(self):
+    def set_col_sector_inmo(self) -> pd.core.frame.DataFrame:
         """Create a new column call it 'sector_inmo'. This column contain a string of the socioeconomic real estate
          segment.
 
@@ -127,7 +134,7 @@ class PerfectRadar:
 
         Returns
         ----------
-        DataFrame
+        DataFrame -> pd.core.frame.DataFrame
         """
 
         df = self.df
@@ -140,10 +147,93 @@ class PerfectRadar:
             raise 'You need to apply the method csv_to_df first to make this action'
 
         df['sector_inmo'] = df.apply(lambda row: segment_sector_inmo(row.loc[type_of_offer_col],
-                                                                     row.loc[price_col]), axis= 1)
+                                                                     row.loc[price_col]), axis=1)
         return df
 
-    def subset_by_type(self, type_of_listing: str = 'Casa', type_of_offer: str = 'Buy'):
+    def set_avg_pricem2_col(self) -> pd.core.frame.DataFrame:
+        """Create a new column in all the dataframe assigned
+
+        Returns
+        ----------
+        pd.core.frame.DataFrame
+        """
+
+        df = self.df
+
+        land_size_m2 = self.config_columns['LAND_SIZE']
+        price = self.config_columns['PRICE']
+        type_of_listing_col = self.config_columns['TYPE_OF_LISTING']
+
+        # Validate the existence of a DataFrame
+        if df is None:
+            raise 'You need to apply the method csv_to_df first to make this action'
+
+        df['avg_price_m2'] = df.apply(lambda row: avg_price_m2(row.loc[price],
+                                                               row.loc[land_size_m2],
+                                                               row.loc[type_of_listing_col]), axis=1)
+
+        return df
+
+    def set_avg_priceconst_col(self) -> pd.core.frame.DataFrame:
+        """Create a new column in all the dataframe assigned
+
+        Returns
+        ----------
+        pd.core.frame.DataFrame
+        """
+
+        df = self.df
+
+        land_size_m2 = self.config_columns['LAND_SIZE']
+        price = self.config_columns['PRICE']
+
+        # Validate the existence of a DataFrame
+        if df is None:
+            raise 'You need to apply the method csv_to_df first to make this action'
+
+        df['avg_price_m2'] = df.apply(lambda row: avg_price_m2_const(row.loc[price], row.loc[land_size_m2]), axis=1)
+
+        return df
+
+    def set_sim_val(self, price: float_int, m2_terr: float_int,
+                    m2_const: float_int, rooms: int, bathrooms: int, cars: int) -> None:
+        """Assign the values to the attributes of the basic information to simulates a Listing
+
+        Parameters
+        ----------
+        price: float_int:
+            Is the Price of the simulate listing.
+
+        m2_terr: float_int:
+            Is the Land Size of the simulate listing.
+
+        m2_const: float_int:
+            Is the Construction of the simulate listing.
+
+        rooms: int:
+            Is the # of rooms of the simulate listing.
+
+        bathrooms: int:
+            Is the # of bathrooms of the simulate listing.
+        cars: int:
+            Is the # cars of the simulate listing.
+
+        Returns
+        ----------
+        None
+        """
+
+        self.price = price
+        self.m2_terr = m2_terr
+        self.m2_cosnt = m2_const
+        self.rooms = rooms
+        self.bathrooms = bathrooms
+        self.cars = cars
+
+        # Change this Global Value to true to apply the simulation
+        self.sim_data = True
+
+    def subset_by_type(self, type_of_listing: str = 'Casa', type_of_offer: str = 'Buy') -> pd.core.frame.DataFrame:
         """Create a Subset of the DataFrame by type of listing and type of offer.
         
         The function identify if is a Sale or Rent property. If is a Sale property it creates a new attribute call it:
@@ -174,17 +264,18 @@ class PerfectRadar:
 
         Returns
         -------
+        DataFrame -> pd.core.frame.DataFrame
         """
 
         # Are the values to subset and evaluate
         get_type_listing = self.config_columns.get('TYPE_OF_LISTING')
         get_type_offer = self.config_columns.get('TYPE_OF_OFFER')
-        get_rent = self.config_columns.get('RENT')
+        rent_val = self.config_columns.get('RENT')
 
         # Validate if the Config_column is setup
-        if not hasattr(PerfectRadar, 'config_columns'):
-            raise('You must setup the config_columns values of the DataFrame Columns names. '
-                  'Use the config_columns method to do this!!!.')
+        if not hasattr(self, 'config_columns'):  # <- Validate attribute exist
+            raise ('You must setup the config_columns values of the DataFrame Columns names. '
+                   'Use the config_columns method to do this!!!.')
 
         # Create a General Subset: Sale / Rent
         self.subset_by_type = self.df[
@@ -194,23 +285,53 @@ class PerfectRadar:
         # Create a copy, because without this it have a conflict with the DataBase
         self.subset_by_type = self.subset_by_type.copy()
 
+        # Assign the Rent Attribute the None Value, The avoid conflict in the mesure method
+        self.subset_by_type_rent = None
         # If is A sale it creates a new DF for Rentals.
-        if type_of_offer != get_rent:
-
+        if type_of_offer != rent_val:
             self.subset_by_type_rent = self.df[
                 (self.df[get_type_listing] == type_of_listing) &
-                (self.df[get_type_offer] == get_rent)] # <-- Rental
+                (self.df[get_type_offer] == rent_val)]  # <-- Rental
 
             # Copy a new DataFrame from Rentals
-            self.subset_by_type_rent = self.subset_by_type.copy()
+            self.subset_by_type_rent = self.subset_by_type_rent.copy()
 
-            # Return two Copy subsets: Sales & Rentals of the same zone.
-            return self.subset_by_type, self.subset_by_type_rent
+        return self.subset_by_type, self.subset_by_type_rent  # <- Sales and Rental Result
 
-        return self.subset_by_type
+    def set_subset_sector_inmo(self) -> pd.core.frame.DataFrame:
+        """Validate if the Rent Subset have enough data to be significant to create a Subset with this data.
+
+        It applies a if condition counting the rows in de DF. If doesn't have more than 3 rows it would return
+        false. And then Only would considerate the Average price and m2 construction price from the Main Subset.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        DataFrame
+        """
+
+        # Validate is set_sim_val was used
+        if not hasattr(self, 'sim_data'):
+            raise 'First you need to apply the "set_sim_val" method to use this method.'
+
+        rent_subset = self.subset_by_type_rent
+
+        # Validate rent_subset exist
+        if rent_subset is None:
+            raise 'set_subset_sector_inmo: This function only apply for Buy properties.Change the argument to "buy" in the statement: type_of_offer'
+
+        # Assign the social segment of the real estate property
+        self.sector_inmo = segment_sector_inmo('Buy', self.price)
 
 
-    def mesure_distance(self, lat: float = None, long: float = None):
+        # Create the subset
+        self.subset_by_type_rent = rent_subset[rent_subset['sector_inmo'] == self.sector_inmo]
+
+        return self.subset_by_type_rent
+
+    def mesure_distance(self, lat: float = None, long: float = None) -> distance.geodesic:
         """Mesure the distance between one to one coordinates.
         
         Apply the distance formula to mesure the distance between the main latitude and longitude with
@@ -229,15 +350,15 @@ class PerfectRadar:
 
         Returns
         -------
-        Distance
+        Distance -> distance.geodesic
         """
 
         if self.lat is None and self.long is None:
-            raise 'You need to add the main coordinates. Apply "assign_coordinates" function to do that =)'
+            raise 'You need to add the main coordinates. Apply "set_coordinates" function to do that =)'
 
         return distance.distance((self.lat, self.long), (lat, long))
 
-    def mesure_df_distances(self):
+    def mesure_df_distances(self) -> pd.core.frame.DataFrame:
         """Mesure the distance between one to many coordinates.
         
         Apply the 'Mesure distance function' on multiple rows of the self.subset_by_type (DataFrame) and create
@@ -252,16 +373,26 @@ class PerfectRadar:
         DataFrame
         """
 
-        if self.subset_by_type is None:
+        main_subset = self.subset_by_type
+        rent_subset = self.subset_by_type_rent if self.subset_by_type_rent is not None else None
+        lat = self.config_columns.get('LAT')  # <- The name of the Lat Col
+        long = self.config_columns.get('LON')  # <- The name of the Long Col
+
+        # Validate Main subset exist
+        if main_subset is None:
             raise 'Apply the subset_by_type function first.'
 
-        self.subset_by_type['distancia'] = self.subset_by_type.apply(
-            lambda row: self.mesure_distance(row.loc[self.config_columns.get
-            ('LAT')], row.loc[self.config_columns.get('LON')]), axis=1)
+        main_subset['distancia'] = main_subset.apply(
+            lambda row: self.mesure_distance(row.loc[lat], row.loc[long]), axis=1)
 
-        return self.subset_by_type
+        # Validate if Rent Subset exist
+        if rent_subset is not None:
+            rent_subset['distancia'] = rent_subset.apply(
+                lambda row: self.mesure_distance(row.loc[lat], row.loc[long]), axis=1)
 
-    def subset_by_km(self):
+        return main_subset, rent_subset
+
+    def subset_by_km(self) -> pd.core.frame.DataFrame:
         """Crete a new subset base on the nearest distance of the main coordinates an the listings.
         
         By default use 1.5 radius, this is equal to 3km. The listings less than 1.5 in the distancia column of
@@ -277,9 +408,14 @@ class PerfectRadar:
 
         self.subset_by_type = self.subset_by_type[self.subset_by_type['distancia'] <= self.RADIO]
 
-        return self.subset_by_type
+        # Validate if Rent Subset Exist
+        if self.subset_by_type_rent is not None:
+            self.subset_by_type_rent = self.subset_by_type_rent[self.subset_by_type_rent['distancia'] <= self.RADIO]
 
-    def rm_outliers(self, *values_to_rm: str, show_describe: bool = False):
+        return self.subset_by_type, self.subset_by_type_rent
+
+    def rm_outliers(self, dataframe: pd.core.frame.DataFrame,
+                    show_describe: bool = False, *values_to_rm: str) -> pd.core.frame.DataFrame:
         """Remove the Outliers values in the DataFrame.
         
         The most commune values to remove are: price, land size and
@@ -288,44 +424,48 @@ class PerfectRadar:
 
         Parameters
         ----------
-        *values_to_rm : str
-            This is a list of the names of columns values that will be removed from the Subset DataFrame.
-
-        show_describe : bool
+        show_describe : boolean "
             This apply the describe method of pandas to show a resume of the final result.
             (Default value = None, optional)
+
+        dataframe : pd.core.frame.DataFrame :
+            This is the attribute that contains the DataFrame it would remove the outliers
+            (Example: self.subset_by_type')
+
+        *values_to_rm : str :
+            This is a list of the names of columns values that will be removed from the Subset DataFrame.
 
         Returns
         -------
         DataFrame
         """
 
-        if not bool(values_to_rm):  # <- Validate if is a empty list
+        if not values_to_rm:  # <- Validate if is a empty list
             raise ('You need to add Values to the "rm_outliers" function. For example: price,'
                    'land_size or construction_size')
 
         df_without_outliers = []
         for val in values_to_rm:
-            val_to_rm = self.subset_by_type[val]
+            val_to_rm = dataframe[val]
 
             # Create a Subset of the Outliers values
             q_low = val_to_rm.quantile(0.01)
             q_high = val_to_rm.quantile(0.99)
 
-            self.subset_by_type = self.subset_by_type[(val_to_rm < q_high) & (val_to_rm > q_low)]
+            dataframe = dataframe[(val_to_rm < q_high) & (val_to_rm > q_low)]
 
-            df_without_outliers.append(self.subset_by_type)
+            df_without_outliers.append(dataframe)
 
         # Add df to list
-        self.subset_by_type = pd.concat(df_without_outliers)
+        dataframe = pd.concat(df_without_outliers)
 
         # Drop Duplicate Rows by SKU
-        self.subset_by_type = self.subset_by_type.drop_duplicates(subset=self.config_columns.get('ID'), keep='first')
+        dataframe = dataframe.drop_duplicates(subset=self.config_columns.get('ID'), keep='first')
 
         # Show the a resume of the data result.
         if show_describe:
-            print(f'The function run correctly! Total results near: {len(self.subset_by_type)}\n')
-            print(self.subset_by_type[['precio_name', 'm2_terreno_name', 'm2_construccion_name']].describe(). \
+            print(f'The function run correctly! Total results near: {len(dataframe)}\n')
+            print(dataframe[['precio_name', 'm2_terreno_name', 'm2_construccion_name']].describe(). \
                   apply(lambda x: x.apply('{:.2f}'.format)))
 
-        return self.subset_by_type
+        return dataframe

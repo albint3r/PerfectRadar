@@ -56,3 +56,69 @@ def segment_sector_inmo(type_of_offer_col: str, price_col: int):
             sector_inmo = 'Premium'
 
     return sector_inmo
+
+def avg_price_m2(price: float, land_size_m2: float, type_of_listing_col: str) -> float:
+    """Creates a New Column call it mean_price_m2, that refer to the averange value
+    of the meter in a listing property.
+
+    Parameters
+    ----------
+        price : float :
+            Is the price of the Main Listing
+
+        land_size_m2 : float :
+            Is the land size of the Main Listing
+
+        type_of_listing_col: str
+            Is the way to validate if is a house or apartment. In general Apartments don't have
+            land size and it would cause a Zero Division error.
+
+    Returns
+    ----------
+    float or None
+    """
+
+    # validate if is a House
+    if type_of_listing_col == 'Casa':
+
+        try:
+            result = price / land_size_m2
+        except ZeroDivisionError:
+            result = 0
+
+    elif type_of_listing_col == 'Departamento':
+        result = None
+
+    else:
+        result = None
+
+    return result
+
+
+def avg_price_m2_const(price: float, m2_construction: float) -> float:
+    """Creates a New Column call it mean_price_m2, that refer to the average value
+    of the meter in a listing property.
+
+    Parameters
+    ----------
+        price : float :
+            Is the price of the Main Listing
+
+        m2_construction : float :
+            Is the Construction size of the Main Listing
+
+    Returns
+    ----------
+    float
+    """
+    try:
+        result = price / m2_construction
+
+    except ZeroDivisionError:
+
+        result = None
+
+    return result
+
+if __name__ == '__main__':
+    print(avg_price_m2(5000000, 120, 'Casa'))

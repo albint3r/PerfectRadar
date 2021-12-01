@@ -3,12 +3,14 @@ from geopy import distance
 import pandas as pd
 from ..perfectradar.col_creator import segment_sector_inmo
 
+
 class PerfectRadar:
     """Find the nearest listing of a coordinate in your city (Data Base)."""
 
     RADIO = 1.5  # <- Radio of 1.5 km
+    RENTAL_MINIMAL_DATA = 3
 
-    def __init__(self, project_name: str,  *cvs_file_path: csv):
+    def __init__(self, project_name: str, *cvs_file_path: csv):
         """This are the initialize values to create a instance.
 
         Need to add the name of the project and a list of CSV tables, that contains longitud and latitud columns.
@@ -32,7 +34,7 @@ class PerfectRadar:
     def __repr__(self):
         return self.project_name
 
-    def config_columns(self, id : str, lat_col: str, lon_col: str, type_of_listing_col: str,
+    def config_columns(self, id: str, lat_col: str, lon_col: str, type_of_listing_col: str,
                        type_of_offer_col: str, price_col: str, rent_value: str):
         """Setup the value names of the columns inside the DataFrame Table.
         
@@ -74,7 +76,7 @@ class PerfectRadar:
         self.config_columns['TYPE_OF_LISTING'] = type_of_listing_col
         self.config_columns['TYPE_OF_OFFER'] = type_of_offer_col
         self.config_columns['PRICE'] = price_col
-        self.config_columns['RENT'] = rent_value # <- This is the only single value in the config
+        self.config_columns['RENT'] = rent_value  # <- This is the only single value in the config
 
     def assign_coordinates(self, main_lat: float, main_lon: float):
         """Create the main coordinates of the listing
@@ -112,9 +114,7 @@ class PerfectRadar:
 
         list_csv = [pd.read_csv(csv) for csv in self.csv]
         self.df = pd.concat(list_csv)
-
         return self.df
-
 
     def create_col_sector_inmo(self):
         """Create a new column call it 'sector_inmo'. This column contain a string of the socioeconomic real estate
@@ -140,8 +140,44 @@ class PerfectRadar:
             raise 'You need to apply the method csv_to_df first to make this action'
 
         df['sector_inmo'] = df.apply(lambda row: segment_sector_inmo(row.loc[type_of_offer_col],
-                                                                     row.loc[price_col]), axis= 1)
+                                                                     row.loc[price_col]), axis=1)
         return df
+
+    def simulate_listing(self, price: int, m2_terr: int, m2_const: int, rooms: int, bathrooms: int, cars: int):
+        """Assign the values to the attributes of the basic information to simulates a Listing
+
+        Parameters
+        ----------
+        price: int:
+            Is the Price of the simulate listing.
+
+        m2_terr: int:
+            Is the Land Size of the simulate listing.
+
+        m2_const: int:
+            Is the Construction of the simulate listing.
+
+        rooms: int:
+            Is the # of rooms of the simulate listing.
+
+        bathrooms: int:
+            Is the # of bathrooms of the simulate listing.
+        cars: int:
+            Is the # cars of the simulate listing.
+
+        Returns
+        ----------
+        """
+
+        self.price = price
+        self.m2_terr = m2_terr
+        self.m2_cosnt = m2_const
+        self.rooms = rooms
+        self.bathrooms = bathrooms
+        self.cars = cars
+
+        # Change this Global Value to true to apply the simulation
+        self.sim_data = True
 
     def subset_by_type(self, type_of_listing: str = 'Casa', type_of_offer: str = 'Buy'):
         """Create a Subset of the DataFrame by type of listing and type of offer.
@@ -179,12 +215,12 @@ class PerfectRadar:
         # Are the values to subset and evaluate
         get_type_listing = self.config_columns.get('TYPE_OF_LISTING')
         get_type_offer = self.config_columns.get('TYPE_OF_OFFER')
-        get_rent = self.config_columns.get('RENT')
+        rent_val = self.config_columns.get('RENT')
 
         # Validate if the Config_column is setup
-        if not hasattr(PerfectRadar, 'config_columns'):
-            raise('You must setup the config_columns values of the DataFrame Columns names. '
-                  'Use the config_columns method to do this!!!.')
+        if not hasattr(PerfectRadar, 'config_columns'): # <- Validate attribute exist
+            raise ('You must setup the config_columns values of the DataFrame Columns names. '
+                   'Use the config_columns method to do this!!!.')
 
         # Create a General Subset: Sale / Rent
         self.subset_by_type = self.df[
@@ -194,20 +230,49 @@ class PerfectRadar:
         # Create a copy, because without this it have a conflict with the DataBase
         self.subset_by_type = self.subset_by_type.copy()
 
+        # Assign the Rent Attribute the None Value, The avoid conflict in the mesure method
+        self.subset_by_type_rent = None
         # If is A sale it creates a new DF for Rentals.
-        if type_of_offer != get_rent:
-
+        if type_of_offer != rent_val:
             self.subset_by_type_rent = self.df[
                 (self.df[get_type_listing] == type_of_listing) &
-                (self.df[get_type_offer] == get_rent)] # <-- Rental
+                (self.df[get_type_offer] == rent_val)]  # <-- Rental
 
             # Copy a new DataFrame from Rentals
             self.subset_by_type_rent = self.subset_by_type.copy()
 
-            # Return two Copy subsets: Sales & Rentals of the same zone.
-            return self.subset_by_type, self.subset_by_type_rent
+        return self.subset_by_type, self.subset_by_type_rent  # <- Sales and Rental Result
 
-        return self.subset_by_type
+    def create_subset_sector_inmo(self):
+        """Validate if the Rent Subset have enough data to be significant to create a Subset with this data.
+
+        It applies a if condition counting the rows in de DF. If doesn't have more than 3 rows it would return
+        false. And then Only would considerate the Average price and m2 construction price from the Main Subset.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        DataFrame
+        """
+
+        # Validate if the user apply before the simulate_listing method
+        if not hasattr('perfectradar',self.SIM_DATA):
+            raise 'You need to apply the "sim_listing" method to use this method.'  
+
+        rent_subset = self.subset_by_type_rent
+
+        # Validate rent_subset exist
+        if rent_subset is not None:
+
+            # Assign the social segment of the real estate property
+            self.sector_inmo = create_col_sector_inmo('Casa', self.price)
+
+            # Create the subset
+            self.sector_inmo = rent_subset[rent_subset['sector_inmo'] == self.sector_inmo]
+
+        return self.sector_inmo
 
 
     def mesure_distance(self, lat: float = None, long: float = None):
@@ -252,12 +317,21 @@ class PerfectRadar:
         DataFrame
         """
 
-        if self.subset_by_type is None:
+        main_subset = self.subset_by_type
+        rent_subset = self.subset_by_type_rent if self.subset_by_type_rent is not None else None
+        lat = self.config_columns.get('LAT')
+        long = self.config_columns.get('LON')
+
+        if main_subset is None:
             raise 'Apply the subset_by_type function first.'
 
-        self.subset_by_type['distancia'] = self.subset_by_type.apply(
-            lambda row: self.mesure_distance(row.loc[self.config_columns.get
-            ('LAT')], row.loc[self.config_columns.get('LON')]), axis=1)
+        main_subset['distancia'] = main_subset.apply(
+            lambda row: self.mesure_distance(row.loc[lat], row.loc[long]), axis=1)
+
+        # Validate if Rent Subset exist
+        if rent_subset is not None:
+            rent_subset['distancia'] = rent_subset.apply(
+                lambda row: self.mesure_distance(row.loc[lat], row.loc[long]), axis=1)
 
         return self.subset_by_type
 
@@ -291,7 +365,7 @@ class PerfectRadar:
         *values_to_rm : str
             This is a list of the names of columns values that will be removed from the Subset DataFrame.
 
-        show_describe : bool
+        show_describe : boolean
             This apply the describe method of pandas to show a resume of the final result.
             (Default value = None, optional)
 
@@ -300,7 +374,7 @@ class PerfectRadar:
         DataFrame
         """
 
-        if not bool(values_to_rm):  # <- Validate if is a empty list
+        if not values_to_rm:  # <- Validate if is a empty list
             raise ('You need to add Values to the "rm_outliers" function. For example: price,'
                    'land_size or construction_size')
 

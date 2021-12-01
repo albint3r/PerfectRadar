@@ -11,7 +11,7 @@ class PerfectRadar:
     """Find the nearest listing of a coordinate in your city (Data Base)."""
 
     RADIO = 1.5  # <- Radio of 1.5 km
-    RENTAL_MINIMAL_DATA = 3
+    RENTAL_MINIMAL_DATA = 30
 
     def __init__(self, project_name: str, *cvs_file_path: csv):
         """This are the initialize values to create a instance.
@@ -325,10 +325,11 @@ class PerfectRadar:
         # Assign the social segment of the real estate property
         self.sector_inmo = segment_sector_inmo('Buy', self.price)
 
-        # Create the subset
-        rent_subset = rent_subset[rent_subset['sector_inmo'] == self.sector_inmo]
 
-        return rent_subset
+        # Create the subset
+        self.subset_by_type_rent = rent_subset[rent_subset['sector_inmo'] == self.sector_inmo]
+
+        return self.subset_by_type_rent
 
     def mesure_distance(self, lat: float = None, long: float = None) -> distance.geodesic:
         """Mesure the distance between one to one coordinates.

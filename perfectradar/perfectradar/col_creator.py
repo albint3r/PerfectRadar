@@ -1,4 +1,4 @@
-def segment_sector_inmo(type_of_offer_col: str, price_col: int):
+def segment_sector_inmo(type_of_offer_col: str, price_col: int) -> int:
     """Create a New Column call it 'Sector_inmo'. This is a filter of the socioeconomic sectors in Mexico
     by the price_col of the property.
 
@@ -15,13 +15,13 @@ def segment_sector_inmo(type_of_offer_col: str, price_col: int):
     """
 
     type_of_offer = type_of_offer_col
-    sector_inmo = None
+    sector_inmo = 'Unknown'
 
     # Validate if is a Sale
-    if type_of_offer == 'Venta' or 'Buy':
+    if 'Buy' == type_of_offer or type_of_offer == 'Venta':
 
         # Depend of the price_col of the listing assign a value.
-        if 1000000 >= price_col:
+        if price_col <= 1000000:
             sector_inmo = 'Interés Social'
 
         if 1000001 <= price_col <= 3000000:
@@ -37,7 +37,7 @@ def segment_sector_inmo(type_of_offer_col: str, price_col: int):
             sector_inmo = 'Premium'
 
     # Validate if is a Apartment 
-    if type_of_offer == 'Renta' or 'Rent':
+    if type_of_offer == 'Rent' or type_of_offer == 'Renta' :
 
         # Depend of the price_col of the listing assign a value.
         if 5000 >= price_col:
@@ -75,24 +75,24 @@ def avg_price_m2(price: float, land_size_m2: float, type_of_listing_col: str) ->
 
     Returns
     ----------
-    float or None
+    Int
     """
 
     # validate if is a House
-    if type_of_listing_col == 'Casa':
+    if type_of_listing_col == 'Casa' or type_of_listing_col == 'House' :
 
         try:
             result = price / land_size_m2
         except ZeroDivisionError:
             result = 0
 
-    elif type_of_listing_col == 'Departamento':
-        result = None
+    elif type_of_listing_col == 'Departamento' or type_of_listing_col == 'Department':
+        result = 0
 
     else:
-        result = None
+        result = 0
 
-    return result
+    return round(result)
 
 
 def avg_price_m2_const(price: float, m2_construction: float) -> float:
@@ -109,16 +109,16 @@ def avg_price_m2_const(price: float, m2_construction: float) -> float:
 
     Returns
     ----------
-    float
+    Int
     """
     try:
         result = price / m2_construction
 
     except ZeroDivisionError:
 
-        result = None
+        result = 0
 
-    return result
+    return round(result)
 
 if __name__ == '__main__':
     print(avg_price_m2(5000000, 120, 'Casa'))

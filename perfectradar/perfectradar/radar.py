@@ -6,12 +6,11 @@ from ..perfectradar.col_creator import segment_sector_inmo, avg_price_m2, avg_pr
 
 float_int = Union[float, int]
 
-
 class PerfectRadar:
     """Find the nearest listing of a coordinate in your city (Data Base)."""
 
-    RADIO = 1.5  # <- Radio of 1.5 km
-    RENTAL_MINIMAL_DATA = 30
+    RADIO = 1.5  # <- Is the distance it will be calculated between The main location and other.
+    RENTAL_MINIMAL_DATA = 5 # <- Is the minimal amount of rows in Rent DataFrame to accepts.
 
     def __init__(self, project_name: str, *cvs_file_path: csv):
         """This are the initialize values to create a instance.
@@ -56,17 +55,17 @@ class PerfectRadar:
             Is the Longitude of the main location
 
         type_of_listing_col : str :
-            Is the name of the column with the values of the type of listings (Example: Home, Department)
+            Is the name of the column with the values of the type of listings (Values Examples: Home, Department)
 
         type_of_offer_col : str :
-            Is the name of the column with the values of the type of offer (Example: Sale, Rent)
+            Is the name of the column with the values of the type of offer (Values Examples: Sale, Rent)
 
         price_col : str :
-            Is the name of the column with the values of the price (Example: $$$$)
+            Is the name of the column with the values of the price (Value Example: $ 75000000)
 
         rent_value : str :
             Is the name of the value inside of the Column 'type_of_offer_col' to identify the Rent property
-
+            # TODO Improve this comment
         Returns
         ----------
         None
@@ -81,10 +80,13 @@ class PerfectRadar:
         self.config_columns['TYPE_OF_OFFER'] = type_of_offer_col
         self.config_columns['PRICE'] = price_col
         self.config_columns['LAND_SIZE'] = land_size_col
-        self.config_columns['RENT'] = rent_value  # <- This is the only single value in the config
+        self.config_columns['RENT'] = rent_value  # <-This is not a Column Name. It refers a Value inside a Column Val.
 
     def set_coordinates(self, main_lat: float, main_lon: float) -> None:
-        """Create the main coordinates of the listing
+        """Set the main coordinates of the point you want to analyze.
+
+        It will create a Circle of 3 Km or the equivalent of 1.5 radio (GLOBAL DEFAULT VALUE). With this circumference
+        it will select all the other assigned coordinates points there are inside it.
 
         Parameters
         ----------
@@ -137,21 +139,22 @@ class PerfectRadar:
         DataFrame -> pd.core.frame.DataFrame
         """
 
-        df = self.df
 
-        type_of_offer_col = self.config_columns['TYPE_OF_OFFER']
+        df = self.df
+        type_of_offer_col = self.config_columns['TYPE_OF_OFFER'] # <- Just for make more readable the code
         price_col = self.config_columns['PRICE']
 
-        # Validate the existence of a DataFrame
+        # Validate if the method csv_to_df was applied before.
         if df is None:
             raise 'You need to apply the method csv_to_df first to make this action'
 
+        # Create the Column that contain the category by price of the listing.
         df['sector_inmo'] = df.apply(lambda row: segment_sector_inmo(row.loc[type_of_offer_col],
                                                                      row.loc[price_col]), axis=1)
         return df
 
     def set_avg_pricem2_col(self) -> pd.core.frame.DataFrame:
-        """Create a new column in all the dataframe assigned
+        """Set a new column that contains the Average Price of the construction of a property.
 
         Returns
         ----------
@@ -168,6 +171,7 @@ class PerfectRadar:
         if df is None:
             raise 'You need to apply the method csv_to_df first to make this action'
 
+        # Crete the Column with the average price of land size
         df['avg_price_m2'] = df.apply(lambda row: avg_price_m2(row.loc[price],
                                                                row.loc[land_size_m2],
                                                                row.loc[type_of_listing_col]), axis=1)
@@ -175,7 +179,7 @@ class PerfectRadar:
         return df
 
     def set_avg_priceconst_col(self) -> pd.core.frame.DataFrame:
-        """Create a new column in all the dataframe assigned
+        """Set a new column that contains the average price of construction of a property.
 
         Returns
         ----------
@@ -191,13 +195,16 @@ class PerfectRadar:
         if df is None:
             raise 'You need to apply the method csv_to_df first to make this action'
 
-        df['avg_price_m2'] = df.apply(lambda row: avg_price_m2_const(row.loc[price], row.loc[land_size_m2]), axis=1)
+        # Create the column with the average price
+        df['avg_price_const'] = df.apply(lambda row: avg_price_m2_const(row.loc[price], row.loc[land_size_m2]), axis=1)
 
         return df
 
     def set_sim_val(self, price: float_int, m2_terr: float_int,
                     m2_const: float_int, rooms: int, bathrooms: int, cars: int) -> None:
-        """Assign the values to the attributes of the basic information to simulates a Listing
+        """Assign information values to the attributes  to simulates a Listing.
+
+        This is convenient to use when you what to calculate the Financial CAT value of the listing.
 
         Parameters
         ----------
@@ -238,7 +245,12 @@ class PerfectRadar:
         
         The function identify if is a Sale or Rent property. If is a Sale property it creates a new attribute call it:
         'self.subset_by_type_rent'; this attribute works to calculate the average rental in the zone. But, if is
-        a Rental it wouldn't do this, because is redundant.
+        a Rental it wouldn't do this, because is redundant. This function all ways return two DataFrames. But,
+        have some exceptions. 1) First: If is a Buy Listing it will return two DF. 2) Second: If is a Rental it will
+        return One DF and a None Value. The none Value reference to the Rent DataFrame that want create, because
+        it ineficiente calculate Buy if the user select Only rent.
+
+        Is probably that in next version it will all ways return 2 DataFrames with information. To calculate both sides!
 
         Parameters
         ----------
@@ -269,7 +281,7 @@ class PerfectRadar:
 
         # Are the values to subset and evaluate
         get_type_listing = self.config_columns.get('TYPE_OF_LISTING')
-        get_type_offer = self.config_columns.get('TYPE_OF_OFFER')
+        get_type_offer = self.config_columns.get('TYPE_OF_OFFER') # Just to make more readable the code
         rent_val = self.config_columns.get('RENT')
 
         # Validate if the Config_column is setup
@@ -301,8 +313,9 @@ class PerfectRadar:
     def set_subset_sector_inmo(self) -> pd.core.frame.DataFrame:
         """Validate if the Rent Subset have enough data to be significant to create a Subset with this data.
 
-        It applies a if condition counting the rows in de DF. If doesn't have more than 3 rows it would return
-        false. And then Only would considerate the Average price and m2 construction price from the Main Subset.
+        It applies a if condition counting the rows in de DF. If doesn't have more than 3 rows (default)
+         it would return false. And then Only would considerate the Average price and m2 construction
+         price from the Main Subset.
 
         Parameters
         ----------
@@ -312,7 +325,7 @@ class PerfectRadar:
         DataFrame
         """
 
-        # Validate is set_sim_val was used
+        # Validate is func set_sim_val was used before
         if not hasattr(self, 'sim_data'):
             raise 'First you need to apply the "set_sim_val" method to use this method.'
 
@@ -374,7 +387,7 @@ class PerfectRadar:
         """
 
         main_subset = self.subset_by_type
-        rent_subset = self.subset_by_type_rent if self.subset_by_type_rent is not None else None
+        rent_subset = self.subset_by_type_rent if self.subset_by_type_rent is not None else None # Validate if Rent DF
         lat = self.config_columns.get('LAT')  # <- The name of the Lat Col
         long = self.config_columns.get('LON')  # <- The name of the Long Col
 
@@ -395,8 +408,8 @@ class PerfectRadar:
     def subset_by_km(self) -> pd.core.frame.DataFrame:
         """Crete a new subset base on the nearest distance of the main coordinates an the listings.
         
-        By default use 1.5 radius, this is equal to 3km. The listings less than 1.5 in the distancia column of
-        would be added to this new subset.
+        By default use 1.5 radius, this is equal to 3km. The listings less than 1.5 in the distancia column of the
+        Table would be added to this new subset.
 
         Parameters
         ----------
@@ -406,7 +419,9 @@ class PerfectRadar:
         DataFrame
         """
 
-        self.subset_by_type = self.subset_by_type[self.subset_by_type['distancia'] <= self.RADIO]
+        main_df = self.subset_by_type # Just make more readable the code
+
+        self.subset_by_type = main_df[main_df['distancia'] <= self.RADIO]
 
         # Validate if Rent Subset Exist
         if self.subset_by_type_rent is not None:
@@ -448,18 +463,19 @@ class PerfectRadar:
         for val in values_to_rm:
             val_to_rm = dataframe[val]
 
-            # Create a Subset of the Outliers values
+            # Create a Subset of the Outliers values (Min and Max).
             q_low = val_to_rm.quantile(0.01)
             q_high = val_to_rm.quantile(0.99)
 
+            # Concatenate The subset to have all rows DF
             dataframe = dataframe[(val_to_rm < q_high) & (val_to_rm > q_low)]
 
             df_without_outliers.append(dataframe)
 
-        # Add df to list
+        # Because it creates a new Table for each value introduced before is important to concat all tables.
         dataframe = pd.concat(df_without_outliers)
 
-        # Drop Duplicate Rows by SKU
+        # And Drop the duplicate values for is ID (Example: SKU).
         dataframe = dataframe.drop_duplicates(subset=self.config_columns.get('ID'), keep='first')
 
         # Show the a resume of the data result.
